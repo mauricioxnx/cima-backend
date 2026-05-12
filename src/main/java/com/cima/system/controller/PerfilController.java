@@ -26,7 +26,7 @@ public class PerfilController {
     private final PerfilService perfilService;
 
     @PostMapping
-    @PreAuthorize("hasAuthority('Administrador')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
     @Operation(summary = "Criar perfil")
     public ResponseEntity<ApiResponse<PerfilResponse>> criar(@Valid @RequestBody PerfilRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -34,14 +34,14 @@ public class PerfilController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('Administrador')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
     @Operation(summary = "Atualizar perfil")
     public ResponseEntity<ApiResponse<PerfilResponse>> atualizar(@PathVariable Long id, @Valid @RequestBody PerfilRequest request) {
         return ResponseEntity.ok(ApiResponse.sucesso(perfilService.atualizar(id, request), "Perfil atualizado"));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('Administrador')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
     @Operation(summary = "Remover perfil")
     public ResponseEntity<ApiResponse<Void>> remover(@PathVariable Long id) {
         perfilService.remover(id);

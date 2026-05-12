@@ -26,7 +26,7 @@ public class FornecedorController {
     private final FornecedorService fornecedorService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('Administrador','Gerente de Stock')")
+    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','GERENTE_STOCK')")
     @Operation(summary = "Cadastrar fornecedor")
     public ResponseEntity<ApiResponse<FornecedorResponse>> criar(@Valid @RequestBody FornecedorRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -34,14 +34,14 @@ public class FornecedorController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('Administrador','Gerente de Stock')")
+    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','GERENTE_STOCK')")
     @Operation(summary = "Atualizar fornecedor")
     public ResponseEntity<ApiResponse<FornecedorResponse>> atualizar(@PathVariable Long id, @Valid @RequestBody FornecedorRequest request) {
         return ResponseEntity.ok(ApiResponse.sucesso(fornecedorService.atualizar(id, request), "Fornecedor atualizado"));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('Administrador','Gerente de Stock')")
+    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','GERENTE_STOCK')")
     @Operation(summary = "Remover fornecedor")
     public ResponseEntity<ApiResponse<Void>> remover(@PathVariable Long id) {
         fornecedorService.remover(id);

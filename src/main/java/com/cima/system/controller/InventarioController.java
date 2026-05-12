@@ -26,7 +26,7 @@ public class InventarioController {
     private final InventarioService inventarioService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('Administrador','Gerente de Stock')")
+    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','GERENTE_STOCK')")
     @Operation(summary = "Criar produto no inventário")
     public ResponseEntity<ApiResponse<InventarioResponse>> criar(@Valid @RequestBody InventarioRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -34,14 +34,14 @@ public class InventarioController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('Administrador','Gerente de Stock')")
+    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','GERENTE_STOCK')")
     @Operation(summary = "Atualizar produto")
     public ResponseEntity<ApiResponse<InventarioResponse>> atualizar(@PathVariable Long id, @Valid @RequestBody InventarioRequest request) {
         return ResponseEntity.ok(ApiResponse.sucesso(inventarioService.atualizar(id, request), "Produto atualizado"));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('Administrador','Gerente de Stock')")
+    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','GERENTE_STOCK')")
     @Operation(summary = "Remover produto")
     public ResponseEntity<ApiResponse<Void>> remover(@PathVariable Long id) {
         inventarioService.remover(id);

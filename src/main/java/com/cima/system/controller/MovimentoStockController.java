@@ -29,7 +29,7 @@ public class MovimentoStockController {
     private final MovimentoStockService movimentoService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('Administrador','Gerente de Stock')")
+    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','GERENTE_STOCK')")
     @Operation(summary = "Registar movimento de stock")
     public ResponseEntity<ApiResponse<MovimentoStockResponse>> registar(@Valid @RequestBody MovimentoStockRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
