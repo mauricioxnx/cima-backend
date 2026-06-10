@@ -6,6 +6,7 @@ import com.cima.system.entity.*;
 import com.cima.system.enums.EstadoManutencao;
 import com.cima.system.exception.ResourceNotFoundException;
 import com.cima.system.repository.*;
+import com.cima.system.service.HistoricoService;
 import com.cima.system.service.ManutencaoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,19 +26,40 @@ public class ManutencaoServiceImpl implements ManutencaoService {
     private final TipoManutencaoRepository tipoManutencaoRepository;
     private final MaquinaVeiculoRepository maquinaVeiculoRepository;
     private final InventarioRepository inventarioRepository;
+    private final HistoricoService historicoService; // ✅
 
     @Override
     public ManutencaoResponse criar(ManutencaoRequest request) {
         Manutencao m = buildFromRequest(new Manutencao(), request);
         m.setEstado(EstadoManutencao.PENDENTE);
-        return toResponse(manutencaoRepository.save(m));
+        Manutencao saved = manutencaoRepository.save(m);
+
+        // ✅
+        historicoService.registar(
+                "Manutenção criada: " + (saved.getDescricao() != null ? saved.getDescricao() : saved.getIdTipo()),
+                request.getUtilizadorId(),
+                request.getInventarioId(),
+                saved.getId()
+        );
+
+        return toResponse(saved);
     }
 
     @Override
     public ManutencaoResponse atualizar(Long id, ManutencaoRequest request) {
         Manutencao m = buscarEntidade(id);
         buildFromRequest(m, request);
-        return toResponse(manutencaoRepository.save(m));
+        Manutencao saved = manutencaoRepository.save(m);
+
+        // ✅
+        historicoService.registar(
+                "Manutenção #" + id + " actualizada",
+                request.getUtilizadorId(),
+                request.getInventarioId(),
+                id
+        );
+
+        return toResponse(saved);
     }
 
     @Override
@@ -47,12 +69,30 @@ public class ManutencaoServiceImpl implements ManutencaoService {
         if (estado == EstadoManutencao.CONCLUIDA && m.getDataExecucao() == null) {
             m.setDataExecucao(LocalDate.now());
         }
-        return toResponse(manutencaoRepository.save(m));
+        Manutencao saved = manutencaoRepository.save(m);
+
+        // ✅
+        historicoService.registar(
+                "Estado da manutenção #" + id + " alterado para: " + estado,
+                saved.getUtilizador() != null ? saved.getUtilizador().getId() : null,
+                null,
+                id
+        );
+
+        return toResponse(saved);
     }
 
     @Override
     public void remover(Long id) {
-        manutencaoRepository.delete(buscarEntidade(id));
+        Manutencao m = buscarEntidade(id);
+
+        // ✅
+        historicoService.registar(
+                "Manutenção #" + id + " eliminada: " + (m.getDescricao() != null ? m.getDescricao() : m.getIdTipo()),
+                null, null, id
+        );
+
+        manutencaoRepository.delete(m);
     }
 
     @Override
@@ -105,7 +145,6 @@ public class ManutencaoServiceImpl implements ManutencaoService {
         m.setCusto(r.getCusto());
         m.setDataExecucao(r.getDataExecucao());
         if (r.getEstado() != null) m.setEstado(r.getEstado());
-
         if (r.getUtilizadorId() != null) {
             m.setUtilizador(utilizadorRepository.findById(r.getUtilizadorId())
                     .orElseThrow(() -> new ResourceNotFoundException("Utilizador não encontrado: " + r.getUtilizadorId())));

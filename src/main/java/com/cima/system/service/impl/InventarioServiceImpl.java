@@ -6,6 +6,7 @@ import com.cima.system.entity.Inventario;
 import com.cima.system.exception.BusinessException;
 import com.cima.system.exception.ResourceNotFoundException;
 import com.cima.system.repository.InventarioRepository;
+import com.cima.system.service.HistoricoService;
 import com.cima.system.service.InventarioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class InventarioServiceImpl implements InventarioService {
 
     private final InventarioRepository inventarioRepository;
+    private final HistoricoService historicoService; // ✅
 
     @Override
     public InventarioResponse criar(InventarioRequest request) {
@@ -37,7 +39,15 @@ public class InventarioServiceImpl implements InventarioService {
                 .preco(request.getPreco())
                 .quantidade(request.getQuantidade())
                 .build();
-        return toResponse(inventarioRepository.save(inv));
+        Inventario saved = inventarioRepository.save(inv);
+
+        // ✅
+        historicoService.registar(
+                "Produto criado: [" + saved.getCodigo() + "] " + saved.getDescricao(),
+                null, saved.getId(), null
+        );
+
+        return toResponse(saved);
     }
 
     @Override
@@ -55,12 +65,28 @@ public class InventarioServiceImpl implements InventarioService {
         inv.setPrecoVenda3(request.getPrecoVenda3());
         inv.setPreco(request.getPreco());
         inv.setQuantidade(request.getQuantidade());
-        return toResponse(inventarioRepository.save(inv));
+        Inventario saved = inventarioRepository.save(inv);
+
+        // ✅
+        historicoService.registar(
+                "Produto actualizado: [" + saved.getCodigo() + "] " + saved.getDescricao(),
+                null, id, null
+        );
+
+        return toResponse(saved);
     }
 
     @Override
     public void remover(Long id) {
-        inventarioRepository.delete(buscarEntidade(id));
+        Inventario inv = buscarEntidade(id);
+
+        // ✅
+        historicoService.registar(
+                "Produto eliminado: [" + inv.getCodigo() + "] " + inv.getDescricao(),
+                null, id, null
+        );
+
+        inventarioRepository.delete(inv);
     }
 
     @Override
@@ -110,16 +136,10 @@ public class InventarioServiceImpl implements InventarioService {
 
     private InventarioResponse toResponse(Inventario i) {
         return InventarioResponse.builder()
-                .id(i.getId())
-                .codigo(i.getCodigo())
-                .descricao(i.getDescricao())
-                .descricao3(i.getDescricao3())
-                .unidadeBase(i.getUnidadeBase())
-                .precoVenda1(i.getPrecoVenda1())
-                .precoVenda2(i.getPrecoVenda2())
-                .precoVenda3(i.getPrecoVenda3())
-                .preco(i.getPreco())
-                .quantidade(i.getQuantidade())
+                .id(i.getId()).codigo(i.getCodigo()).descricao(i.getDescricao())
+                .descricao3(i.getDescricao3()).unidadeBase(i.getUnidadeBase())
+                .precoVenda1(i.getPrecoVenda1()).precoVenda2(i.getPrecoVenda2())
+                .precoVenda3(i.getPrecoVenda3()).preco(i.getPreco()).quantidade(i.getQuantidade())
                 .build();
     }
 }

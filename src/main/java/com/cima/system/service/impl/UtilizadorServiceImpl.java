@@ -8,6 +8,7 @@ import com.cima.system.exception.BusinessException;
 import com.cima.system.exception.ResourceNotFoundException;
 import com.cima.system.repository.PerfilRepository;
 import com.cima.system.repository.UtilizadorRepository;
+import com.cima.system.service.HistoricoService;
 import com.cima.system.service.UtilizadorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +26,7 @@ public class UtilizadorServiceImpl implements UtilizadorService {
     private final UtilizadorRepository utilizadorRepository;
     private final PerfilRepository perfilRepository;
     private final PasswordEncoder passwordEncoder;
+    private final HistoricoService historicoService; // ✅
 
     @Override
     public UtilizadorResponse criar(UtilizadorRequest request) {
@@ -35,15 +37,21 @@ public class UtilizadorServiceImpl implements UtilizadorService {
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado com ID: " + request.getPerfilId()));
 
         Utilizador utilizador = Utilizador.builder()
-                .nome(request.getNome())
-                .email(request.getEmail())
+                .nome(request.getNome()).email(request.getEmail())
                 .senha(passwordEncoder.encode(request.getSenha()))
-                .telefone(request.getTelefone())
-                .endereco(request.getEndereco())
+                .telefone(request.getTelefone()).endereco(request.getEndereco())
                 .ativo(request.getAtivo() != null ? request.getAtivo() : true)
-                .perfil(perfil)
-                .build();
-        return toResponse(utilizadorRepository.save(utilizador));
+                .perfil(perfil).build();
+
+        Utilizador saved = utilizadorRepository.save(utilizador);
+
+        // ✅
+        historicoService.registar(
+                "Utilizador criado: " + saved.getNome() + " (" + saved.getEmail() + ") — Perfil: " + perfil.getNome(),
+                saved.getId(), null, null
+        );
+
+        return toResponse(saved);
     }
 
     @Override
@@ -62,12 +70,27 @@ public class UtilizadorServiceImpl implements UtilizadorService {
         utilizador.setPerfil(perfil);
         if (request.getAtivo() != null) utilizador.setAtivo(request.getAtivo());
 
-        return toResponse(utilizadorRepository.save(utilizador));
+        Utilizador saved = utilizadorRepository.save(utilizador);
+
+        // ✅
+        historicoService.registar(
+                "Utilizador actualizado: " + saved.getNome() + " (" + saved.getEmail() + ")",
+                id, null, null
+        );
+
+        return toResponse(saved);
     }
 
     @Override
     public void remover(Long id) {
         Utilizador u = buscarEntidade(id);
+
+        // ✅
+        historicoService.registar(
+                "Utilizador eliminado: " + u.getNome() + " (" + u.getEmail() + ")",
+                id, null, null
+        );
+
         utilizadorRepository.delete(u);
     }
 
@@ -76,6 +99,12 @@ public class UtilizadorServiceImpl implements UtilizadorService {
         Utilizador u = buscarEntidade(id);
         u.setAtivo(false);
         utilizadorRepository.save(u);
+
+        // ✅
+        historicoService.registar(
+                "Utilizador desativado: " + u.getNome() + " (" + u.getEmail() + ")",
+                id, null, null
+        );
     }
 
     @Override
@@ -83,6 +112,12 @@ public class UtilizadorServiceImpl implements UtilizadorService {
         Utilizador u = buscarEntidade(id);
         u.setAtivo(true);
         utilizadorRepository.save(u);
+
+        // ✅
+        historicoService.registar(
+                "Utilizador activado: " + u.getNome() + " (" + u.getEmail() + ")",
+                id, null, null
+        );
     }
 
     @Override
@@ -117,6 +152,12 @@ public class UtilizadorServiceImpl implements UtilizadorService {
         }
         u.setSenha(passwordEncoder.encode(novaSenha));
         utilizadorRepository.save(u);
+
+        // ✅
+        historicoService.registar(
+                "Senha alterada para o utilizador: " + u.getNome(),
+                id, null, null
+        );
     }
 
     private Utilizador buscarEntidade(Long id) {
@@ -126,16 +167,11 @@ public class UtilizadorServiceImpl implements UtilizadorService {
 
     private UtilizadorResponse toResponse(Utilizador u) {
         return UtilizadorResponse.builder()
-                .id(u.getId())
-                .nome(u.getNome())
-                .email(u.getEmail())
-                .telefone(u.getTelefone())
-                .endereco(u.getEndereco())
-                .ativo(u.getAtivo())
+                .id(u.getId()).nome(u.getNome()).email(u.getEmail())
+                .telefone(u.getTelefone()).endereco(u.getEndereco()).ativo(u.getAtivo())
                 .perfilId(u.getPerfil() != null ? u.getPerfil().getId() : null)
                 .perfilNome(u.getPerfil() != null ? u.getPerfil().getNome() : null)
-                .criadoEm(u.getCriadoEm())
-                .atualizadoEm(u.getAtualizadoEm())
+                .criadoEm(u.getCriadoEm()).atualizadoEm(u.getAtualizadoEm())
                 .build();
     }
 }

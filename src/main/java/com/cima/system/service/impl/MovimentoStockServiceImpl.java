@@ -8,6 +8,7 @@ import com.cima.system.enums.TipoMovimento;
 import com.cima.system.exception.BusinessException;
 import com.cima.system.exception.ResourceNotFoundException;
 import com.cima.system.repository.MovimentoStockRepository;
+import com.cima.system.service.HistoricoService;
 import com.cima.system.service.MovimentoStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,12 +25,12 @@ public class MovimentoStockServiceImpl implements MovimentoStockService {
 
     private final MovimentoStockRepository movimentoRepository;
     private final InventarioServiceImpl inventarioService;
+    private final HistoricoService historicoService; // ✅
 
     @Override
     public MovimentoStockResponse registar(MovimentoStockRequest request) {
         Inventario inv = inventarioService.buscarEntidade(request.getInventarioId());
 
-        // Actualizar quantidade do inventário
         if (request.getTipoMovimento() == TipoMovimento.ENTRADA) {
             inv.setQuantidade(inv.getQuantidade() + request.getQuantidade());
         } else if (request.getTipoMovimento() == TipoMovimento.SAIDA) {
@@ -47,7 +48,19 @@ public class MovimentoStockServiceImpl implements MovimentoStockService {
                 .inventario(inv)
                 .build();
 
-        return toResponse(movimentoRepository.save(mov));
+        MovimentoStock saved = movimentoRepository.save(mov);
+
+        // ✅
+        historicoService.registar(
+                "Movimento de stock: " + request.getTipoMovimento() +
+                        " | Produto: [" + inv.getCodigo() + "] " + inv.getDescricao() +
+                        " | Qtd: " + request.getQuantidade(),
+                null,
+                inv.getId(),
+                null
+        );
+
+        return toResponse(saved);
     }
 
     @Override
