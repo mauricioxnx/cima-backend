@@ -10,7 +10,7 @@ public interface InventarioService {
     InventarioResponse atualizar(Long id, InventarioRequest request);
     void remover(Long id);
     InventarioResponse buscarPorId(Long id);
-    InventarioResponse buscarPorCodigo(String codigo);
+    List<InventarioResponse> listarPorFornecedor(Long fornecedorId);
     List<InventarioResponse> listarTodos();
     List<InventarioResponse> pesquisar(String descricao);
     List<InventarioResponse> listarEstoqueBaixo(int minimo);

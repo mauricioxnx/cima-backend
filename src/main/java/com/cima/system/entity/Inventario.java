@@ -18,9 +18,6 @@ public class Inventario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false, length = 50)
-    private String codigo;
-
     @Column(nullable = false, length = 255)
     private String descricao;
 
@@ -46,6 +43,12 @@ public class Inventario {
     @Builder.Default
     private Integer quantidade = 0;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fornecedor_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Fornecedor fornecedor;
+
     @OneToMany(mappedBy = "inventario", fetch = FetchType.LAZY)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
@@ -60,9 +63,4 @@ public class Inventario {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<Manutencao> manutencoes;
-
-    @OneToMany(mappedBy = "inventario", fetch = FetchType.LAZY)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private List<Fornecimento> fornecimentos;
 }

@@ -6,13 +6,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface InventarioRepository extends JpaRepository<Inventario, Long> {
-    Optional<Inventario> findByCodigo(String codigo);
-    boolean existsByCodigo(String codigo);
+
     List<Inventario> findByDescricaoContainingIgnoreCase(String descricao);
+
+    List<Inventario> findByFornecedorId(Long fornecedorId);
 
     @Query("SELECT i FROM Inventario i WHERE i.quantidade <= :minimo")
     List<Inventario> findEstoqueBaixo(int minimo);

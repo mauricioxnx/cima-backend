@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class InventarioResponse {
     private Long id;
-    private String codigo;
     private String descricao;
     private String descricao3;
     private String unidadeBase;
@@ -19,4 +18,6 @@ public class InventarioResponse {
     private BigDecimal precoVenda3;
     private BigDecimal preco;
     private Integer quantidade;
+    private Long fornecedorId;
+    private String fornecedorNome;
 }

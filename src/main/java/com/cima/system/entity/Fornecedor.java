@@ -34,8 +34,11 @@ public class Fornecedor {
     @Column(length = 255)
     private String endereco;
 
-    // Relação com Inventario é INDIRECTA via Fornecimento
-    // NÃO existe ManyToMany directo — remover evita o AnnotationException
+    @OneToMany(mappedBy = "fornecedor", fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Inventario> inventarios;
+
     @OneToMany(mappedBy = "fornecedor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude

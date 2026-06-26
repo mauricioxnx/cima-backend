@@ -54,12 +54,6 @@ public class InventarioController {
         return ResponseEntity.ok(ApiResponse.sucesso(inventarioService.buscarPorId(id)));
     }
 
-    @GetMapping("/codigo/{codigo}")
-    @Operation(summary = "Buscar produto por código")
-    public ResponseEntity<ApiResponse<InventarioResponse>> buscarPorCodigo(@PathVariable String codigo) {
-        return ResponseEntity.ok(ApiResponse.sucesso(inventarioService.buscarPorCodigo(codigo)));
-    }
-
     @GetMapping
     @Operation(summary = "Listar / pesquisar produtos")
     public ResponseEntity<ApiResponse<List<InventarioResponse>>> listar(
@@ -68,6 +62,12 @@ public class InventarioController {
                 ? inventarioService.pesquisar(descricao)
                 : inventarioService.listarTodos();
         return ResponseEntity.ok(ApiResponse.sucesso(lista));
+    }
+
+    @GetMapping("/fornecedor/{fornecedorId}")
+    @Operation(summary = "Listar produtos por fornecedor")
+    public ResponseEntity<ApiResponse<List<InventarioResponse>>> listarPorFornecedor(@PathVariable Long fornecedorId) {
+        return ResponseEntity.ok(ApiResponse.sucesso(inventarioService.listarPorFornecedor(fornecedorId)));
     }
 
     @GetMapping("/estoque-baixo")

@@ -8,10 +8,6 @@ import java.math.BigDecimal;
 @Data
 public class InventarioRequest {
 
-    @NotBlank(message = "Código é obrigatório")
-    @Size(max = 50)
-    private String codigo;
-
     @NotBlank(message = "Descrição é obrigatória")
     @Size(max = 255)
     private String descricao;
@@ -31,4 +27,6 @@ public class InventarioRequest {
     @NotNull(message = "Quantidade é obrigatória")
     @Min(value = 0, message = "Quantidade não pode ser negativa")
     private Integer quantidade;
+
+    private Long fornecedorId; // opcional — pode ser null
 }

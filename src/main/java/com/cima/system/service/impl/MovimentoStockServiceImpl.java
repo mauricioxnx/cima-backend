@@ -25,7 +25,7 @@ public class MovimentoStockServiceImpl implements MovimentoStockService {
 
     private final MovimentoStockRepository movimentoRepository;
     private final InventarioServiceImpl inventarioService;
-    private final HistoricoService historicoService; // ✅
+    private final HistoricoService historicoService;
 
     @Override
     public MovimentoStockResponse registar(MovimentoStockRequest request) {
@@ -50,10 +50,9 @@ public class MovimentoStockServiceImpl implements MovimentoStockService {
 
         MovimentoStock saved = movimentoRepository.save(mov);
 
-        // ✅
         historicoService.registar(
                 "Movimento de stock: " + request.getTipoMovimento() +
-                        " | Produto: [" + inv.getCodigo() + "] " + inv.getDescricao() +
+                        " | Produto: [ID " + inv.getId() + "] " + inv.getDescricao() +
                         " | Qtd: " + request.getQuantidade(),
                 null,
                 inv.getId(),
@@ -106,7 +105,6 @@ public class MovimentoStockServiceImpl implements MovimentoStockService {
                 .preco(m.getPreco())
                 .quantidade(m.getQuantidade())
                 .inventarioId(m.getInventario().getId())
-                .inventarioCodigo(m.getInventario().getCodigo())
                 .inventarioDescricao(m.getInventario().getDescricao())
                 .build();
     }
