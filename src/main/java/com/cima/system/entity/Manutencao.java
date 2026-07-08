@@ -67,4 +67,8 @@ public class Manutencao {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<Historico> historicos;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_movimento")
+    private MovimentoStock movimentoStock;
 }

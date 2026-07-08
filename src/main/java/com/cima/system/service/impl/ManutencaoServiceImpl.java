@@ -4,6 +4,7 @@ import com.cima.system.dto.request.ManutencaoRequest;
 import com.cima.system.dto.response.ManutencaoResponse;
 import com.cima.system.entity.*;
 import com.cima.system.enums.EstadoManutencao;
+import com.cima.system.enums.TipoMovimento;
 import com.cima.system.exception.ResourceNotFoundException;
 import com.cima.system.repository.*;
 import com.cima.system.service.HistoricoService;
@@ -26,7 +27,8 @@ public class ManutencaoServiceImpl implements ManutencaoService {
     private final TipoManutencaoRepository tipoManutencaoRepository;
     private final MaquinaVeiculoRepository maquinaVeiculoRepository;
     private final InventarioRepository inventarioRepository;
-    private final HistoricoService historicoService; // ✅
+    private final MovimentoStockRepository movimentoStockRepository;
+    private final HistoricoService historicoService;
 
     @Override
     public ManutencaoResponse criar(ManutencaoRequest request) {
@@ -34,7 +36,25 @@ public class ManutencaoServiceImpl implements ManutencaoService {
         m.setEstado(EstadoManutencao.PENDENTE);
         Manutencao saved = manutencaoRepository.save(m);
 
-        // ✅
+        // ✅ se tem peça de inventário, regista saída de stock automaticamente
+        if (request.getInventarioId() != null && request.getQuantidade() != null && request.getQuantidade() > 0) {
+            Inventario inv = inventarioRepository.findById(request.getInventarioId()).orElse(null);
+            if (inv != null) {
+                if (inv.getQuantidade() >= request.getQuantidade()) {
+                    inv.setQuantidade(inv.getQuantidade() - request.getQuantidade());
+                    inventarioRepository.save(inv);
+                }
+                MovimentoStock mov = MovimentoStock.builder()
+                        .tipoMovimento(TipoMovimento.SAIDA)
+                        .quantidade(request.getQuantidade())
+                        .documentoRef("MANUTENCAO-#" + saved.getId())
+                        .inventario(inv)
+                        .build();
+                movimentoStockRepository.save(mov);
+            }
+        }
+
+        // ✅ histórico
         historicoService.registar(
                 "Manutenção criada: " + (saved.getDescricao() != null ? saved.getDescricao() : saved.getIdTipo()),
                 request.getUtilizadorId(),
@@ -51,7 +71,6 @@ public class ManutencaoServiceImpl implements ManutencaoService {
         buildFromRequest(m, request);
         Manutencao saved = manutencaoRepository.save(m);
 
-        // ✅
         historicoService.registar(
                 "Manutenção #" + id + " actualizada",
                 request.getUtilizadorId(),
@@ -71,7 +90,6 @@ public class ManutencaoServiceImpl implements ManutencaoService {
         }
         Manutencao saved = manutencaoRepository.save(m);
 
-        // ✅
         historicoService.registar(
                 "Estado da manutenção #" + id + " alterado para: " + estado,
                 saved.getUtilizador() != null ? saved.getUtilizador().getId() : null,
@@ -86,7 +104,6 @@ public class ManutencaoServiceImpl implements ManutencaoService {
     public void remover(Long id) {
         Manutencao m = buscarEntidade(id);
 
-        // ✅
         historicoService.registar(
                 "Manutenção #" + id + " eliminada: " + (m.getDescricao() != null ? m.getDescricao() : m.getIdTipo()),
                 null, null, id
@@ -104,31 +121,36 @@ public class ManutencaoServiceImpl implements ManutencaoService {
     @Override
     @Transactional(readOnly = true)
     public List<ManutencaoResponse> listarTodos() {
-        return manutencaoRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList());
+        return manutencaoRepository.findAll().stream()
+                .map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ManutencaoResponse> listarPorEstado(EstadoManutencao estado) {
-        return manutencaoRepository.findByEstado(estado).stream().map(this::toResponse).collect(Collectors.toList());
+        return manutencaoRepository.findByEstado(estado).stream()
+                .map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ManutencaoResponse> listarPorMaquina(Long maquinaId) {
-        return manutencaoRepository.findByMaquinaVeiculoId(maquinaId).stream().map(this::toResponse).collect(Collectors.toList());
+        return manutencaoRepository.findByMaquinaVeiculoId(maquinaId).stream()
+                .map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ManutencaoResponse> listarPorPeriodo(LocalDate inicio, LocalDate fim) {
-        return manutencaoRepository.findByDataAgendadaBetween(inicio, fim).stream().map(this::toResponse).collect(Collectors.toList());
+        return manutencaoRepository.findByDataAgendadaBetween(inicio, fim).stream()
+                .map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ManutencaoResponse> listarAtrasadas() {
-        return manutencaoRepository.findAtrasadas(LocalDate.now()).stream().map(this::toResponse).collect(Collectors.toList());
+        return manutencaoRepository.findAtrasadas(LocalDate.now()).stream()
+                .map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
@@ -145,6 +167,7 @@ public class ManutencaoServiceImpl implements ManutencaoService {
         m.setCusto(r.getCusto());
         m.setDataExecucao(r.getDataExecucao());
         if (r.getEstado() != null) m.setEstado(r.getEstado());
+
         if (r.getUtilizadorId() != null) {
             m.setUtilizador(utilizadorRepository.findById(r.getUtilizadorId())
                     .orElseThrow(() -> new ResourceNotFoundException("Utilizador não encontrado: " + r.getUtilizadorId())));
@@ -160,7 +183,16 @@ public class ManutencaoServiceImpl implements ManutencaoService {
         if (r.getInventarioId() != null) {
             m.setInventario(inventarioRepository.findById(r.getInventarioId())
                     .orElseThrow(() -> new ResourceNotFoundException("Inventário não encontrado: " + r.getInventarioId())));
+        } else {
+            m.setInventario(null);
         }
+        if (r.getMovimentoStockId() != null) {
+            m.setMovimentoStock(movimentoStockRepository.findById(r.getMovimentoStockId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Movimento de stock não encontrado: " + r.getMovimentoStockId())));
+        } else {
+            m.setMovimentoStock(null);
+        }
+
         return m;
     }
 
@@ -181,6 +213,9 @@ public class ManutencaoServiceImpl implements ManutencaoService {
                 .maquinaVeiculoId(m.getMaquinaVeiculo() != null ? m.getMaquinaVeiculo().getId() : null)
                 .maquinaVeiculoModelo(m.getMaquinaVeiculo() != null ? m.getMaquinaVeiculo().getModelo() : null)
                 .inventarioId(m.getInventario() != null ? m.getInventario().getId() : null)
+                .movimentoStockId(m.getMovimentoStock() != null ? m.getMovimentoStock().getIdMovimento() : null)
+                .movimentoStockTipo(m.getMovimentoStock() != null ? m.getMovimentoStock().getTipoMovimento().name() : null)
+                .movimentoStockData(m.getMovimentoStock() != null ? m.getMovimentoStock().getDataMovimento() : null)
                 .build();
     }
 }

@@ -1,6 +1,7 @@
 package com.cima.system.dto.request;
 
 import com.cima.system.enums.EstadoManutencao;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -32,4 +33,9 @@ public class ManutencaoRequest {
     private Long maquinaVeiculoId;
 
     private Long inventarioId;
+
+    private Long movimentoStockId;
+    // ✅ adiciona este campo
+    @Min(value = 0)
+    private Integer quantidade;
 }

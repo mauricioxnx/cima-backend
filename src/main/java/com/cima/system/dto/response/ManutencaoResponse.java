@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -25,4 +26,7 @@ public class ManutencaoResponse {
     private Long maquinaVeiculoId;
     private String maquinaVeiculoModelo;
     private Long inventarioId;
+    private Long movimentoStockId;
+    private String movimentoStockTipo;
+    private LocalDateTime movimentoStockData;
 }

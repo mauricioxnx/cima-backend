@@ -42,4 +42,9 @@ public class MovimentoStock {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_inventario", nullable = false)
     private Inventario inventario;
+
+    @OneToOne(mappedBy = "movimentoStock", fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Manutencao manutencao;
 }
