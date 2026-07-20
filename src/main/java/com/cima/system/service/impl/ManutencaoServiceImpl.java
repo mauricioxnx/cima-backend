@@ -30,13 +30,20 @@ public class ManutencaoServiceImpl implements ManutencaoService {
     private final MovimentoStockRepository movimentoStockRepository;
     private final HistoricoService historicoService;
 
+    // ─── estados que colocam a máquina EM_MANUTENCAO ──────────────────────────
+    private static final String ESTADO_EM_MANUTENCAO = "EM_MANUTENCAO";
+    private static final String ESTADO_ACTIVO        = "ACTIVO";
+
     @Override
     public ManutencaoResponse criar(ManutencaoRequest request) {
         Manutencao m = buildFromRequest(new Manutencao(), request);
         m.setEstado(EstadoManutencao.PENDENTE);
         Manutencao saved = manutencaoRepository.save(m);
 
-        // ✅ se tem peça de inventário, regista saída de stock automaticamente
+        // ✅ atualiza estado da máquina para EM_MANUTENCAO
+        atualizarEstadoMaquina(saved.getMaquinaVeiculo(), ESTADO_EM_MANUTENCAO);
+
+        // ✅ regista saída de stock automaticamente se tiver peça associada
         if (request.getInventarioId() != null && request.getQuantidade() != null && request.getQuantidade() > 0) {
             Inventario inv = inventarioRepository.findById(request.getInventarioId()).orElse(null);
             if (inv != null) {
@@ -54,7 +61,6 @@ public class ManutencaoServiceImpl implements ManutencaoService {
             }
         }
 
-        // ✅ histórico
         historicoService.registar(
                 "Manutenção criada: " + (saved.getDescricao() != null ? saved.getDescricao() : saved.getIdTipo()),
                 request.getUtilizadorId(),
@@ -85,9 +91,28 @@ public class ManutencaoServiceImpl implements ManutencaoService {
     public ManutencaoResponse atualizarEstado(Long id, EstadoManutencao estado) {
         Manutencao m = buscarEntidade(id);
         m.setEstado(estado);
+
         if (estado == EstadoManutencao.CONCLUIDA && m.getDataExecucao() == null) {
             m.setDataExecucao(LocalDate.now());
         }
+
+        // ✅ atualiza estado da máquina consoante o novo estado da manutenção
+        if (estado == EstadoManutencao.CONCLUIDA || estado == EstadoManutencao.CANCELADA) {
+            // verifica se há outra manutenção ativa para esta máquina antes de libertar
+            boolean temOutraAtiva = manutencaoRepository
+                    .findByMaquinaVeiculoId(m.getMaquinaVeiculo() != null ? m.getMaquinaVeiculo().getId() : -1L)
+                    .stream()
+                    .anyMatch(man -> !man.getId().equals(id)
+                            && (man.getEstado() == EstadoManutencao.PENDENTE
+                            || man.getEstado() == EstadoManutencao.EM_CURSO));
+
+            if (!temOutraAtiva) {
+                atualizarEstadoMaquina(m.getMaquinaVeiculo(), ESTADO_ACTIVO);
+            }
+        } else if (estado == EstadoManutencao.PENDENTE || estado == EstadoManutencao.EM_CURSO) {
+            atualizarEstadoMaquina(m.getMaquinaVeiculo(), ESTADO_EM_MANUTENCAO);
+        }
+
         Manutencao saved = manutencaoRepository.save(m);
 
         historicoService.registar(
@@ -103,6 +128,18 @@ public class ManutencaoServiceImpl implements ManutencaoService {
     @Override
     public void remover(Long id) {
         Manutencao m = buscarEntidade(id);
+
+        // ✅ verifica se há outra manutenção ativa antes de libertar a máquina
+        boolean temOutraAtiva = manutencaoRepository
+                .findByMaquinaVeiculoId(m.getMaquinaVeiculo() != null ? m.getMaquinaVeiculo().getId() : -1L)
+                .stream()
+                .anyMatch(man -> !man.getId().equals(id)
+                        && (man.getEstado() == EstadoManutencao.PENDENTE
+                        || man.getEstado() == EstadoManutencao.EM_CURSO));
+
+        if (!temOutraAtiva) {
+            atualizarEstadoMaquina(m.getMaquinaVeiculo(), ESTADO_ACTIVO);
+        }
 
         historicoService.registar(
                 "Manutenção #" + id + " eliminada: " + (m.getDescricao() != null ? m.getDescricao() : m.getIdTipo()),
@@ -160,6 +197,14 @@ public class ManutencaoServiceImpl implements ManutencaoService {
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    // ─── helpers ──────────────────────────────────────────────────────────────
+
+    private void atualizarEstadoMaquina(MaquinaVeiculo maquina, String novoEstado) {
+        if (maquina == null) return;
+        maquina.setEstado(novoEstado);
+        maquinaVeiculoRepository.save(maquina);
+    }
+
     private Manutencao buildFromRequest(Manutencao m, ManutencaoRequest r) {
         m.setIdTipo(r.getIdTipo());
         m.setDataAgendada(r.getDataAgendada());
@@ -212,6 +257,7 @@ public class ManutencaoServiceImpl implements ManutencaoService {
                 .tipoManutencaoNome(m.getTipoManutencao() != null ? m.getTipoManutencao().getNomeTipo() : null)
                 .maquinaVeiculoId(m.getMaquinaVeiculo() != null ? m.getMaquinaVeiculo().getId() : null)
                 .maquinaVeiculoModelo(m.getMaquinaVeiculo() != null ? m.getMaquinaVeiculo().getModelo() : null)
+                .maquinaVeiculoEstado(m.getMaquinaVeiculo() != null ? m.getMaquinaVeiculo().getEstado() : null)
                 .inventarioId(m.getInventario() != null ? m.getInventario().getId() : null)
                 .movimentoStockId(m.getMovimentoStock() != null ? m.getMovimentoStock().getIdMovimento() : null)
                 .movimentoStockTipo(m.getMovimentoStock() != null ? m.getMovimentoStock().getTipoMovimento().name() : null)

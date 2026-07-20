@@ -25,6 +25,7 @@ public class ManutencaoResponse {
     private String tipoManutencaoNome;
     private Long maquinaVeiculoId;
     private String maquinaVeiculoModelo;
+    private String maquinaVeiculoEstado;   // ← ACTIVO | EM_MANUTENCAO | INACTIVO
     private Long inventarioId;
     private Long movimentoStockId;
     private String movimentoStockTipo;

@@ -32,7 +32,7 @@ public class HistoricoController {
     }
 
     @GetMapping("/utilizador/{utilizadorId}")
-    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','GERENTE_STOCK','GERENTE_MANUTENCAO')")
+    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR')")
     @Operation(summary = "Histórico por utilizador")
     public ResponseEntity<ApiResponse<List<HistoricoResponse>>> porUtilizador(
             @PathVariable Long utilizadorId) {

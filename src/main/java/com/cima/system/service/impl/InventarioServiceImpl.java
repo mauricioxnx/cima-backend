@@ -4,9 +4,12 @@ import com.cima.system.dto.request.InventarioRequest;
 import com.cima.system.dto.response.InventarioResponse;
 import com.cima.system.entity.Fornecedor;
 import com.cima.system.entity.Inventario;
+import com.cima.system.entity.MovimentoStock;
+import com.cima.system.enums.TipoMovimento;
 import com.cima.system.exception.ResourceNotFoundException;
 import com.cima.system.repository.FornecedorRepository;
 import com.cima.system.repository.InventarioRepository;
+import com.cima.system.repository.MovimentoStockRepository;
 import com.cima.system.service.HistoricoService;
 import com.cima.system.service.InventarioService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ public class InventarioServiceImpl implements InventarioService {
 
     private final InventarioRepository inventarioRepository;
     private final FornecedorRepository fornecedorRepository;
+    private final MovimentoStockRepository movimentoStockRepository;
     private final HistoricoService historicoService;
 
     @Override
@@ -43,6 +47,18 @@ public class InventarioServiceImpl implements InventarioService {
 
         Inventario saved = inventarioRepository.save(inv);
 
+        // ✅ regista ENTRADA automática no movimento de stock ao cadastrar produto
+        if (saved.getQuantidade() != null && saved.getQuantidade() > 0) {
+            MovimentoStock entrada = MovimentoStock.builder()
+                    .tipoMovimento(TipoMovimento.ENTRADA)
+                    .quantidade(saved.getQuantidade())
+                    .documentoRef("CADASTRO-#" + saved.getId())
+                    .preco(saved.getPreco())
+                    .inventario(saved)
+                    .build();
+            movimentoStockRepository.save(entrada);
+        }
+
         historicoService.registar(
                 "Produto criado: [ID " + saved.getId() + "] " + saved.getDescricao()
                         + (fornecedor != null ? " | Fornecedor: " + fornecedor.getNome() : ""),
@@ -57,6 +73,8 @@ public class InventarioServiceImpl implements InventarioService {
         Inventario inv = buscarEntidade(id);
         Fornecedor fornecedor = resolverFornecedor(request.getFornecedorId());
 
+        int quantidadeAnterior = inv.getQuantidade() != null ? inv.getQuantidade() : 0;
+
         inv.setDescricao(request.getDescricao());
         inv.setDescricao3(request.getDescricao3());
         inv.setUnidadeBase(request.getUnidadeBase());
@@ -68,6 +86,19 @@ public class InventarioServiceImpl implements InventarioService {
         inv.setFornecedor(fornecedor);
 
         Inventario saved = inventarioRepository.save(inv);
+
+        // ✅ se a quantidade aumentou via edição, regista AJUSTE de entrada
+        int diff = (request.getQuantidade() != null ? request.getQuantidade() : 0) - quantidadeAnterior;
+        if (diff > 0) {
+            MovimentoStock ajuste = MovimentoStock.builder()
+                    .tipoMovimento(TipoMovimento.AJUSTE)
+                    .quantidade(diff)
+                    .documentoRef("AJUSTE-#" + saved.getId())
+                    .preco(saved.getPreco())
+                    .inventario(saved)
+                    .build();
+            movimentoStockRepository.save(ajuste);
+        }
 
         historicoService.registar(
                 "Produto actualizado: [ID " + saved.getId() + "] " + saved.getDescricao()
